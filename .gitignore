@@ -1,1 +1,7 @@
 data/
+
+
+# ignore any xtc trr
+*.xtc
+*.trr
+
