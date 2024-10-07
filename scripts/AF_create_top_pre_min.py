@@ -169,10 +169,11 @@ def plot_min_energy(vacuo_trr: list[np.ndarray], solvent_trr: list[np.ndarray], 
 
     plt.close(fig)
 
-def AF10K_top_gen(pdb_path:str):
+def AF10K_top_gen(pdb_path:str,box_size):
 
     pdb_name = os.path.basename(pdb_path)
 
+    dir_path = os.path.dirname(pdb_path)
 
     name = pdb_name.split(".")[0]
         
@@ -281,16 +282,32 @@ def AF10K_top_gen(pdb_path:str):
         f.writelines(lines)
 
     # 3. Create Box
-    box_command = [gmx,
-                "editconf",
-                "-f",
-                os.path.join(name + ".gro"),
-                "-o",
-                os.path.join(name + "_box.gro"),
-                "-bt",
-                "cubic",
-                "-d",
-                "1.0"]
+    if box_size is None:
+
+        box_command = [gmx,
+                    "editconf",
+                    "-f",
+                    os.path.join(name + ".gro"),
+                    "-o",
+                    os.path.join(name + "_box.gro"),
+                    "-bt",
+                    "cubic",
+                    "-d",
+                    "1.0"]
+
+    else:
+        box_command = [gmx,
+                    "editconf",
+                    "-f",
+                    os.path.join(name + ".gro"),
+                    "-o",
+                    os.path.join(name + "_box.gro"),
+                    "-bt",
+                    "cubic",
+                    "-box",
+                    f"{box_size}",
+                    f"{box_size}",
+                    f"{box_size}"]
 
     subprocess.run(box_command, cwd=new_top_dir, check=True)
 
@@ -437,12 +454,12 @@ def AF10K_top_gen(pdb_path:str):
     return vac_trr_data, sol_trr_data, name, vac_edr_data, sol_edr_data
 
 
-def iterate_over_dir(dir_path:str):
+def iterate_over_dir(dir_path:str, box_size=None):
     vac_trr_data, sol_trr_data, names = [],[], []
     vac_edr_data, sol_edr_data = [],[]
     for pdb in os.listdir(dir_path):
         if pdb.endswith(".pdb"):
-            vac_trr, sol_trr, name, vac_edr, sol_edr = AF10K_top_gen(os.path.join(dir_path, pdb))
+            vac_trr, sol_trr, name, vac_edr, sol_edr = AF10K_top_gen(os.path.join(dir_path, pdb),box_size)
             vac_trr_data.append(vac_trr)
             sol_trr_data.append(sol_trr)
             vac_edr_data.append(vac_edr)
@@ -487,6 +504,13 @@ def iterate_over_dir(dir_path:str):
 
 if __name__ == "__main__":
 
+    # set GMXLIB to include the AMBER FF14SB force field
+    # os.environ["GMXLIB"] = os.path.join(os.getcwd())
+
+    # check that file is being run in the correct directory
+    assert os.path.basename(os.getcwd()) == "topology_generation", "Please run this script in the topology_generation directory"
+
+
     if len(sys.argv) > 1:
 
         if sys.argv[1] == "-h":
@@ -498,6 +522,23 @@ if __name__ == "__main__":
             iterate_over_dir(dir_path)
 
     else:
-        dir_path = "/home/alexi/Documents/topology_generation/RW_10/BRD4/BRD4_6"
-        # dir_path = "/home/alexi/Documents/topology_generation/MBP"
-        iterate_over_dir(dir_path)
+
+        # protein_names = ["BPTI" ,"BRD4",  "LXR", "MBP"]
+        # protein_names = ["BPTI"]
+
+        # dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT/"
+        # # dir_path = "/home/alexi/Documents/topology_generation/MBP"
+        # for pt in protein_names:
+        #     path = os.path.join(dir_path, pt)
+        #     print(path)
+        #     iterate_over_dir(path)
+
+        protein_names = ["HOIP"]
+
+        dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT/"
+        for pt in protein_names:
+            path = os.path.join(dir_path, pt)
+            print(path)
+            iterate_over_dir(path, box_size=15.0)
+
+        
