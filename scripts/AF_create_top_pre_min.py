@@ -1,6 +1,13 @@
 import os
 import sys
 import subprocess
+from pytrr import GroTrrReader
+import pyedr
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
 # os.chdir("/home/alexi/Documents/topology_generation/")
 # # downlaod the AMBER FF14SB force fid
 # amber_14_url = "https://ftp.gromacs.org/contrib/forcefields/amber14sb_OL15.ff_corrected-Na-cation-params.tar.gz"
@@ -24,6 +31,143 @@ os.environ["GMXLIB"] = os.path.join(os.getcwd())
 # Main modification to the procedure is to create a restraints file for the protein CA atoms using the original structure during equilabration 
 
 # 1. Generate topology files using pdb2gmx
+
+def read_min_energy(trr_path, key:str='f'):
+
+
+    with GroTrrReader(trr_path) as trrfile:
+
+         # get length of trr
+
+        trr_data = []
+
+        for idx, frame in enumerate(trrfile):
+            # print(frame['f_size'])
+            frame_data = trrfile.get_data()
+            print(frame_data[key].sum())
+            trr_data.append(frame_data[key].sum())
+
+        return np.array(trr_data)
+    
+
+def read_EDR_file(edr_path, key:str="Potential"):
+
+    edr_data = pyedr.edr_to_dict(edr_path)
+
+    print(edr_data.keys())
+
+    e_pot = edr_data[key]
+
+    return e_pot
+
+
+
+
+
+# def plot_min_energy(vacuo_trr:list[np.ndarray], solvent_trr:list[np.ndarray], names: list[str]=None, save_path:str=None):
+
+#     if names is None:
+#         names = list(range(1,len(vacuo_trr)+1))
+#         # convert to str
+#     names = [str(name) for name in names]
+
+#     assert len(vacuo_trr) == len(solvent_trr) == len(names), "The number of entries in the two trr arrays must be the same"
+
+#     # plot two subplots - plot the vacuo and solvent trr data
+#     plt.figure(figsize=(10, 5))
+
+#     # create two subplots
+#     ax1 = plt.subplot(1, 2, 1)
+#     ax2 = plt.subplot(1, 2, 2)
+
+
+#     # label each entry by name
+#     for idx, name in enumerate(names):
+#         ax1.plot(vacuo_trr[idx], label=f"{name} vacuo")
+#         ax2.plot(solvent_trr[idx], label=f"{name} solvent")
+
+
+#     ax1.legend()
+#     ax2.legend()
+
+#     if save_path is None:
+#         name_str = "_".join(names)
+#         save_path = f"{name_str}_min_energy_vac-sol.png"
+
+
+
+#     try:
+#         save_path = f"{name_str}_min_energy_vac-sol.png"
+#         plt.savefig(save_path, dpi=300)
+    
+#     except:
+#         _names = []
+#         for idx,name in enumerate(names):
+#             name = name.split("_")[0]+str(idx)
+#             _names.append(name)
+#         name_str = "_".join(names)
+#         save_path = f"{name_str}_min_energy_vac-sol.png"
+#         plt.savefig(save_path, dpi=300)
+
+#     # plt.show()
+#     plt.close()
+
+
+def plot_min_energy(vacuo_trr: list[np.ndarray], solvent_trr: list[np.ndarray], names: list[str] = None, save_path: str = None, ylabel="Energy"):
+    if names is None:
+        names = list(range(1, len(vacuo_trr) + 1))
+
+    # convert to str
+    names = [str(name) for name in names]
+    # print(vacuo_trr.shape)
+    # print(solvent_trr.shape)
+    # assert len(vacuo_trr) == len(solvent_trr) == len(names), "The number of entries in the two trr arrays must be the same"
+
+    # plot two subplots - plot the vacuo and solvent trr data
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+
+    # label each entry by name
+    for idx, name in enumerate(names):
+        print(name)
+        # print(vacuo_trr[idx].astype(float))
+        # print(solvent_trr[idx].astype(float))
+    #     if not isinstance(vacuo_trr[idx], np.ndarray):
+    #         vacuo_trr[idx] = np.array(vacuo_trr[idx])
+    #     if not isinstance(solvent_trr[idx], np.ndarray):
+    #         solvent_trr[idx] = np.array(solvent_trr[idx]))
+        ax1.plot(vacuo_trr[idx], label=f"{name} {idx} vacuo")
+        ax2.plot(solvent_trr[idx], label=f"{name} {idx} solvent")
+
+    ax1.set_title("Vacuo")
+    ax1.set_xlabel("Frame")
+    ax1.set_ylabel(ylabel)
+    ax1.legend()
+
+    ax2.set_title("Solvent")
+    ax2.set_xlabel("Frame")
+    ax2.set_ylabel(ylabel)
+    ax2.legend()
+
+    plt.tight_layout()
+
+    if save_path is None:
+        save_path = os.getcwd()
+
+    try:
+        _names = []
+        for idx, name in enumerate(names):
+            name = name.split("_")[0] + str(idx)
+            _names.append(name)
+        name_str = "_".join(_names)
+        save_path = os.path.join(save_path, f"{name_str}_min_{ylabel}_vac-sol.png")
+        plt.savefig(save_path, dpi=300)
+
+    except:
+        names_str = _names[0] + "_n" + str(len(_names))
+        save_path = os.path.join(save_path, f"{names_str}_min_{ylabel}_vac-sol.png")
+        plt.savefig(save_path, dpi=300)
+
+    plt.close(fig)
 
 def AF10K_top_gen(pdb_path:str):
 
@@ -173,13 +317,15 @@ def AF10K_top_gen(pdb_path:str):
                     "em.tpr",
                     "-v",
                     "-deffnm",
-                    name + "_box_em"]
+                    name + "_box_em",
+                    "-ntomp", "20"]
 
 
     subprocess.run(em_command, cwd=new_top_dir, check=True)
 
-
-
+    vac_trr_path = os.path.join(new_top_dir, name + "_box_em.trr")
+    vac_trr_data = read_min_energy(vac_trr_path)
+    vac_edr_path = vac_trr_path.replace(".trr",".edr")
 
 
 
@@ -258,7 +404,8 @@ def AF10K_top_gen(pdb_path:str):
                     "em.tpr",
                     "-v",
                     "-deffnm",
-                    name + "_em"]
+                    name + "_em",
+                    "-ntomp", "20"]
 
     subprocess.run(em_command, cwd=new_top_dir, check=True)
 
@@ -266,19 +413,75 @@ def AF10K_top_gen(pdb_path:str):
 
     clean_top_dir = os.path.join("clean_top", name)
     os.system("rm -rf " + clean_top_dir)
-    os.makedirs(clean_top_dir, exist_ok=True)
+    try:
+        os.makedirs(clean_top_dir)
+    except:
+        raise Exception("Could not create clean top directory - check for identical names in the directory")
 
     os.system(f"cp {new_top_dir}/{name}.top {clean_top_dir}")
     os.system(f"cp {new_top_dir}/{name}_solv_ions.gro {clean_top_dir}")
     os.system(f"cp {new_top_dir}/{name}.itp {clean_top_dir}")
     os.system(f"cp {new_top_dir}/{name}_ca.itp {clean_top_dir}")
-    os.system(f"cp {new_top_dir}/{name}_em.gro {clean_top_dir}")
+    # os.system(f"cp {new_top_dir}/{name}_box_em.gro {clean_top_dir}")
+    sol_trr_path = os.path.join(new_top_dir, name + "_em.trr")
+    sol_trr_data = read_min_energy(sol_trr_path)
+
+
+    sol_edr_path = sol_trr_path.replace(".trr",".edr")
+
+    edr_key = "Potential"
+    vac_edr_data = read_EDR_file(vac_edr_path,edr_key)
+    sol_edr_data = read_EDR_file(sol_edr_path,edr_key)
+
+
+    return vac_trr_data, sol_trr_data, name, vac_edr_data, sol_edr_data
 
 
 def iterate_over_dir(dir_path:str):
+    vac_trr_data, sol_trr_data, names = [],[], []
+    vac_edr_data, sol_edr_data = [],[]
     for pdb in os.listdir(dir_path):
         if pdb.endswith(".pdb"):
-            AF10K_top_gen(os.path.join(dir_path, pdb))
+            vac_trr, sol_trr, name, vac_edr, sol_edr = AF10K_top_gen(os.path.join(dir_path, pdb))
+            vac_trr_data.append(vac_trr)
+            sol_trr_data.append(sol_trr)
+            vac_edr_data.append(vac_edr)
+            sol_edr_data.append(sol_edr)
+
+            names.append(name)
+
+
+    _names = [name.split("_")[0] for name in names]
+
+
+    # clip really large values in trr data to 10000
+    for idx, _ in enumerate(names):
+        vac_trr_data[idx][vac_trr_data[idx] > 10000] = 10000.1
+        sol_trr_data[idx][sol_trr_data[idx] > 10000] = 10000.1
+        vac_edr_data[idx][vac_edr_data[idx] > 10000] = 10000.1
+        sol_edr_data[idx][sol_edr_data[idx] > 10000] = 10000.1
+
+
+
+
+    # create dataframe of trr data with vac and sol for each frame, with names
+    data = {"name": names, "vac": vac_trr_data, "sol": sol_trr_data,  "e_vac": vac_edr_data, "e_sol": sol_edr_data}
+
+    csv_name = "_".join(_names) + "_min_force_energy.csv"
+    csv_path = os.path.join(dir_path, csv_name)
+
+    df = pd.DataFrame(data)
+
+    df.to_pickle(csv_path)  
+
+
+
+    plot_min_energy(vac_trr_data, sol_trr_data, _names, ylabel="Force", save_path=dir_path)
+    # df.to_csv(csv_path, index=False, float_format='%.2f')
+
+    plot_min_energy(vac_edr_data, sol_edr_data, _names, save_path=dir_path)
+
+
 
 
 
@@ -295,6 +498,6 @@ if __name__ == "__main__":
             iterate_over_dir(dir_path)
 
     else:
-        # dir_path = "/home/alexi/Documents/topology_generation/BPTI"
-        dir_path = "/home/alexi/Documents/topology_generation/MBP"
+        dir_path = "/home/alexi/Documents/topology_generation/RW_10/BRD4/BRD4_6"
+        # dir_path = "/home/alexi/Documents/topology_generation/MBP"
         iterate_over_dir(dir_path)

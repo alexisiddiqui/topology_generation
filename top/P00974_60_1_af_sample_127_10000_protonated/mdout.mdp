@@ -2,7 +2,7 @@
 ;	File 'mdout.mdp' was generated
 ;	By user: alexi (1000)
 ;	On host: Celestial
-;	At date: Fri Apr 26 13:37:25 2024
+;	At date: Thu May  9 13:02:07 2024
 ;
 ;	Created by:
 ;	              :-) GROMACS - gmx grompp, 2021.4-plumed-2.8.0 (-:
@@ -11,7 +11,7 @@
 ;	Data prefix:  /usr/local/gromacs
 ;	Working dir:  /home/alexi/Documents/topology_generation/top/P00974_60_1_af_sample_127_10000_protonated
 ;	Command line:
-;	  gmx_mpi grompp -f /home/alexi/Documents/topology_generation/config/1_minim.mdp -c P00974_60_1_af_sample_127_10000_protonated_solv_ions.gro -r P00974_60_1_af_sample_127_10000_protonated.gro -p P00974_60_1_af_sample_127_10000_protonated.top -maxwarn 2 -o em.tpr
+;	  gmx_mpi grompp -f /home/alexi/Documents/topology_generation/config/1_minim.mdp -c P00974_60_1_af_sample_127_10000_protonated_solv_ions.gro -r P00974_60_1_af_sample_127_10000_protonated_solv_ions.gro -p P00974_60_1_af_sample_127_10000_protonated.top -maxwarn 2 -o em.tpr
 
 ; VARIOUS PREPROCESSING OPTIONS
 ; Preprocessor information: use cpp syntax.
@@ -61,9 +61,9 @@ rtpi                     = 0.05
 
 ; OUTPUT CONTROL OPTIONS
 ; Output frequency for coords (x), velocities (v) and forces (f)
-nstxout                  = 1000
-nstvout                  = 0
-nstfout                  = 0
+nstxout                  = 100
+nstvout                  = 100
+nstfout                  = 100
 ; Output frequency for energies to log file and energy file
 nstlog                   = 1000
 nstcalcenergy            = 100
