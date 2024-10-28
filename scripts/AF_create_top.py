@@ -262,6 +262,14 @@ if __name__ == "__main__":
             iterate_over_dir(dir_path)
 
     else:
-        # dir_path = "/home/alexi/Documents/topology_generation/BPTI"
-        # dir_path = "/home/alexi/Documents/topology_generation/HOIP"
-        iterate_over_dir(dir_path)
+        protein_names = ["BPTI", "BRD4", "HOIP", "LXR", "MBP"]
+
+        for protein in protein_names[:1]:
+
+            base_dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT_cluster10"
+
+            path_suffix = f"{protein}_10"
+
+            dir_path = os.path.join(base_dir_path, protein, path_suffix)
+
+            iterate_over_dir(dir_path)

@@ -422,7 +422,7 @@ def AF10K_top_gen(pdb_path:str,box_size):
                     "-v",
                     "-deffnm",
                     name + "_em",
-                    "-ntomp", "20"]
+                    "-ntomp", "10"]
 
     subprocess.run(em_command, cwd=new_top_dir, check=True)
 
@@ -523,22 +523,33 @@ if __name__ == "__main__":
 
     else:
 
-        # protein_names = ["BPTI" ,"BRD4",  "LXR", "MBP"]
-        # protein_names = ["BPTI"]
+        # # protein_names = ["BPTI" ,"BRD4",  "LXR", "MBP"]
+        # # protein_names = ["BPTI"]
+
+        # # dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT/"
+        # # # dir_path = "/home/alexi/Documents/topology_generation/MBP"
+        # # for pt in protein_names:
+        # #     path = os.path.join(dir_path, pt)
+        # #     print(path)
+        # #     iterate_over_dir(path)
+
+        # protein_names = ["HOIP"]
 
         # dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT/"
-        # # dir_path = "/home/alexi/Documents/topology_generation/MBP"
         # for pt in protein_names:
         #     path = os.path.join(dir_path, pt)
         #     print(path)
-        #     iterate_over_dir(path)
+        #     iterate_over_dir(path, box_size=15.0)
 
-        protein_names = ["HOIP"]
+        protein_names = ["BPTI", "BRD4", "HOIP", "LXR", "MBP"]
+        protein_names = ["BRD4", "MBP"]
 
-        dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT/"
-        for pt in protein_names:
-            path = os.path.join(dir_path, pt)
-            print(path)
-            iterate_over_dir(path, box_size=15.0)
+        for protein in protein_names:
 
-        
+            base_dir_path = "/home/alexi/Documents/topology_generation/max_pLDDT_cluster10"
+
+            path_suffix = f"{protein}_10"
+
+            dir_path = os.path.join(base_dir_path, protein, path_suffix)
+
+            iterate_over_dir(dir_path)
