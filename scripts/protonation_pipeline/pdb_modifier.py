@@ -8,11 +8,11 @@ def run_propka(pdb_file: str) -> str:
     
     # Check if propka is installed
     try:
-        subprocess.run(["propka", "--version"], check=True, capture_output=True)
+        subprocess.run(["propka3", "--version"], check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         raise RuntimeError("PROPKA is not installed or not in PATH. Please install it to proceed.")
 
-    propka_command = ["propka", pdb_file]
+    propka_command = ["propka3", pdb_file]
     subprocess.run(propka_command, check=True, capture_output=True)
     
     pka_file = os.path.basename(pdb_file).replace(".pdb", ".pka")

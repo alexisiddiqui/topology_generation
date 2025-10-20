@@ -17,22 +17,42 @@ def run_gmx_command(arguments: list, stdin_input: str = None, cwd: str = None):
     
     print(f"Running command: {' '.join(command)}")
     
+    # Set up environment with GMXLIB pointing to current directory
+    # This ensures GROMACS can find the custom force field
+    env = os.environ.copy()
+    ff_base_dir = os.getcwd()
+    
+    # If GMXLIB is already set, append our directory; otherwise set it
+    if 'GMXLIB' in env:
+        env['GMXLIB'] = f"{ff_base_dir}:{env['GMXLIB']}"
+    else:
+        env['GMXLIB'] = ff_base_dir
+    
+    # Prepare stdin input - handle both string and bytes
+    stdin_bytes = None
+    if stdin_input is not None:
+        if isinstance(stdin_input, bytes):
+            stdin_bytes = stdin_input
+        else:
+            stdin_bytes = stdin_input.encode()
+    
     result = subprocess.run(
         command,
-        input=stdin_input.encode() if stdin_input else None,
+        input=stdin_bytes,
         capture_output=True,
-        text=True,
+        text=False,  # Use binary mode for both input and output
         cwd=cwd,
+        env=env,
     )
     
     if result.returncode != 0:
         print(f"Error running GROMACS command: {' '.join(command)}")
-        print(f"Stdout: {result.stdout}")
-        print(f"Stderr: {result.stderr}")
+        print(f"Stdout: {result.stdout.decode()}")
+        print(f"Stderr: {result.stderr.decode()}")
         raise RuntimeError("GROMACS command failed.")
     
-    print(result.stdout)
-    print(result.stderr)
+    print(result.stdout.decode())
+    print(result.stderr.decode())
 
 def run_equilibration_step(
     step_num: int,
@@ -41,7 +61,8 @@ def run_equilibration_step(
     input_top: str,
     input_cpt: str,
     output_dir: str,
-    base_name: str
+    base_name: str,
+    reference_gro: str = None  # Add this parameter
 ) -> Dict[str, str]:
     """Runs a single step of equilibration."""
     print(f"--- Running equilibration step {step_num} ---")
@@ -50,6 +71,11 @@ def run_equilibration_step(
     output_tpr = os.path.join(output_dir, f"{step_name}.tpr")
     
     grompp_args = ['grompp', '-maxwarn', '2', '-f', mdp_file, '-c', input_gro, '-p', input_top, '-o', output_tpr]
+    
+    # Add reference structure for position restraints
+    if reference_gro:
+        grompp_args.extend(['-r', reference_gro])
+    
     if input_cpt:
         grompp_args.extend(['-t', input_cpt])
         
@@ -66,7 +92,6 @@ def run_equilibration_step(
         "edr": os.path.join(output_dir, f"{step_name}.edr"),
         "trr": os.path.join(output_dir, f"{step_name}.trr"),
     }
-
 def run_equilibration_pipeline(topology_dir: str, output_dir: str):
     """
     Runs the full equilibration pipeline for a given topology.
@@ -83,7 +108,11 @@ def run_equilibration_pipeline(topology_dir: str, output_dir: str):
     # Initial files from minimization
     current_gro = os.path.join(topology_dir, "em.gro")
     topology_file = os.path.join(topology_dir, f"{base_name}.top")
-    current_cpt = None # No checkpoint file from minimization
+    current_cpt = None
+    
+    # Use the energy-minimized structure as reference for restraints
+    # (it has all atoms: protein + water + ions)
+    reference_gro = current_gro  # Use em.gro as reference
     
     # MDP files for equilibration, in order
     mdp_files = [
@@ -98,7 +127,7 @@ def run_equilibration_pipeline(topology_dir: str, output_dir: str):
     equilibration_results = []
     
     for i, mdp in enumerate(mdp_files):
-        step_num = i + 2 # Start from step 2, since step 1 was minimization
+        step_num = i + 2
         
         outputs = run_equilibration_step(
             step_num=step_num,
@@ -107,7 +136,8 @@ def run_equilibration_pipeline(topology_dir: str, output_dir: str):
             input_top=topology_file,
             input_cpt=current_cpt,
             output_dir=output_dir,
-            base_name=base_name
+            base_name=base_name,
+            reference_gro=reference_gro  # Now points to em.gro
         )
         
         current_gro = outputs["gro"]

@@ -18,22 +18,42 @@ def run_gmx_command(arguments: list, stdin_input: str = None, cwd: str = None):
     
     print(f"Running command: {' '.join(command)}")
     
+    # Set up environment with GMXLIB pointing to current directory
+    # This ensures GROMACS can find the custom force field
+    env = os.environ.copy()
+    ff_base_dir = os.getcwd()
+    
+    # If GMXLIB is already set, append our directory; otherwise set it
+    if 'GMXLIB' in env:
+        env['GMXLIB'] = f"{ff_base_dir}:{env['GMXLIB']}"
+    else:
+        env['GMXLIB'] = ff_base_dir
+    
+    # Prepare stdin input - handle both string and bytes
+    stdin_bytes = None
+    if stdin_input is not None:
+        if isinstance(stdin_input, bytes):
+            stdin_bytes = stdin_input
+        else:
+            stdin_bytes = stdin_input.encode()
+    
     result = subprocess.run(
         command,
-        input=stdin_input.encode() if stdin_input else None,
+        input=stdin_bytes,
         capture_output=True,
-        text=True,
+        text=False,  # Use binary mode for both input and output
         cwd=cwd,
+        env=env,
     )
     
     if result.returncode != 0:
         print(f"Error running GROMACS command: {' '.join(command)}")
-        print(f"Stdout: {result.stdout}")
-        print(f"Stderr: {result.stderr}")
+        print(f"Stdout: {result.stdout.decode()}")
+        print(f"Stderr: {result.stderr.decode()}")
         raise RuntimeError("GROMACS command failed.")
     
-    print(result.stdout)
-    print(result.stderr)
+    print(result.stdout.decode())
+    print(result.stderr.decode())
 
 def generate_topology_for_ph(pdb_file: str, ph: float, output_dir: str):
     """
@@ -58,7 +78,7 @@ def generate_topology_for_ph(pdb_file: str, ph: float, output_dir: str):
     pdb2gmx_output_itp = os.path.join(output_dir, f"{base_name}_posre.itp")
 
     run_gmx_command(
-        ['pdb2gmx', '-f', ph_pdb_file, '-o', pdb2gmx_output_gro, '-p', pdb2gmx_output_top, '-i', pdb2gmx_output_itp, '-ff', 'amber14sb_OL21', '-water', 'tip3p']
+        ['pdb2gmx', '-f', ph_pdb_file, '-o', pdb2gmx_output_gro, '-p', pdb2gmx_output_top, '-i', pdb2gmx_output_itp, '-ff', 'amber14sb_OL21', '-water', 'tip3p', '-ignh']
     )
     print("pdb2gmx finished.")
 
