@@ -10,7 +10,7 @@ def extract_energy_terms(edr_file: str, terms: list, output_dir: str):
     output_xvg = os.path.join(output_dir, f"{os.path.basename(edr_file)}.xvg")
     
     # Prepare input for gmx energy (term numbers followed by 0)
-    gmx_input = b"\n".join([term.encode() for term in terms]) + b"\n0\n"
+    gmx_input = "\n".join(terms) + "\n0\n"
     
     gmx_energy = subprocess.run(
         ['gmx', 'energy', '-f', edr_file, '-o', output_xvg],
@@ -32,7 +32,7 @@ def calculate_rmsd(tpr_file: str, trr_file: str, output_dir: str):
     output_xvg = os.path.join(output_dir, f"rmsd_{os.path.basename(trr_file)}.xvg")
     
     # Input for gmx rms: Backbone for fitting, Backbone for RMSD calc
-    gmx_input = b"Backbone\nBackbone\n"
+    gmx_input = "Backbone\nBackbone\n"
     
     gmx_rms = subprocess.run(
         ['gmx', 'rms', '-s', tpr_file, '-f', trr_file, '-o', output_xvg, '-tu', 'ps'],
